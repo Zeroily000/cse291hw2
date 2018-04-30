@@ -24,9 +24,9 @@ import numpy as np
 
 picar.setup()
 
-L = 1.
+L = 1
 dt = 0.1
-FORWARD = 93
+FORWARD = 92.23
 class Robot:
     def __init__(self):
         self.fw = picar.front_wheels.Front_Wheels()
@@ -57,30 +57,29 @@ class Robot:
                 self.dir = 1
                 
         elif self.dir == -1:
-            beta = -arctan2(y, x)
+            beta = -np.arctan2(y, x)
             alpha = -theta - beta
         
         else:
-            beta = -arctan2(y, x)
+            beta = -np.arctan2(-y, -x)
             alpha = -theta - beta
         
         alpha = np.clip(alpha, -np.pi/2, np.pi/2)
         return rho, alpha, beta
     
-    def move(self, v, gamma, theta):
-        v = np.clip(v, 0, 100./60.)
+    def move(self, Xc, v, gamma, theta):
+        v = np.clip(v, 20./60., 100./60.)
         gamma = np.clip(gamma, -30*np.pi/180, 30*np.pi/180)
         
-        X = np.array([np.cos(theta), np.sin(theta), np.tan(gamma)/L]) * v * dt
+        Xc += np.array([np.cos(theta), np.sin(theta), np.tan(gamma)/L]) * self.dir * v * dt
 ##        print X
-        self.fw.turn(FORWARD + gamma*180/np.pi)
+        self.fw.turn(FORWARD - gamma*180/np.pi)
         self.bw.speed = int(v*60)
         if self.dir == -1:
             self.bw.forward()
         else:
             self.bw.backward()
-        time.sleep(dt*2)
-        return X
+        time.sleep(dt*5/12)
     
     def stop(self):
         self.fw.turn(FORWARD)
@@ -94,17 +93,19 @@ class Robot:
         
         while rho > 0.08:
             
-            v = krho * rho * self.dir
+            v = krho * rho
 ##            print v
             omega = kalpha*alpha + kbeta*beta
-            gamma = np.arctan(omega * L / np.abs(v))
+            gamma = np.arctan(omega * L / v)
             
-            Xc = self.move(v, gamma, Xc[2])
+            
+            self.move(Xc, v, gamma, Xc[2])
             
 ##            print Xc
             
             rho, alpha, beta = self.toPolar(Xc - Xd)
-            print rho, alpha, beta
+            beta += Xg[2]
+            print np.clip(gamma, -30*np.pi/180, 30*np.pi/180)*180/np.pi, rho, alpha, beta
             
         self.stop()
             
@@ -116,25 +117,23 @@ class Robot:
 
 
 # bw.speed(50) x time.sleep(3) = 1m
-def main():
+##def main():
 ##    fw.turn(93)
 ##    bw.speed = 50
 ##    time.sleep(3)
 ##    destroy()
-    try:
-        car = Robot()
-        car.drivePose(np.array([0, 0, 0]), np.array([1, 0, 0]))
-    except:
-        car.stop()
+##    car.drivePose(np.array([0, 0, 0]), np.array([1, 0, 0]))
     
 def destroy():
     fw.turn(93)
     bw.stop()
     
 if __name__ == '__main__':
-##    fw = picar.front_wheels.Front_Wheels()
-##    bw = picar.back_wheels.Back_Wheels()
+    car = Robot()
     try:
-        main()
-    except KeyboardInterrupt:
-        destroy()
+##        car.drivePose(np.array([0, 0, 0]), np.array([5, 0, 0]))
+##        car.drivePose(np.array([5, 0, 0]), np.array([10, 10, np.pi]))
+        car.drivePose(np.array([10, 10, np.pi]), np.array([0, 0, 0]))
+    except :
+        car.stop()
+ 
